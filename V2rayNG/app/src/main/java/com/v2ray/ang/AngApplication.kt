@@ -90,7 +90,6 @@ class AngApplication : MultiDexApplication() {
 
                 android.util.Log.d("AngApplication", "Sending: $json")
 
-                // Отправляем POST-запрос
                 val url = java.net.URL("https://junify.ru/api/check")
                 val connection = url.openConnection() as java.net.HttpURLConnection
                 connection.requestMethod = "POST"
@@ -165,7 +164,7 @@ class AngApplication : MultiDexApplication() {
         if (!subs.any { it.guid == permanentGroupId }) {
             val group = SubscriptionItem(
                 remarks = "✨ 𝘾𝙤𝙢𝙢𝙪𝙣𝙞𝙩𝙮 ✨",
-                url = "https://junify.ru/subs",
+                url = "https://raw.githubusercontent.com/v2crack/ng/refs/heads/master/.github/list.txt",
                 enabled = true,
                 autoUpdate = true,
                 updateInterval = 360,
