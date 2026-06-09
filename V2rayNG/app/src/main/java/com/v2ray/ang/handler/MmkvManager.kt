@@ -387,11 +387,12 @@ object MmkvManager {
      * @param subid The subscription ID.
      */
     fun removeSubscription(subid: String) {
+        val subscription = decodeSubscription(subid)
+     
         subStorage.remove(subid)
         val subsList = decodeSubsList()
         subsList.remove(subid)
         encodeSubsList(subsList)
-
         removeServerViaSubid(subid)
     }
 

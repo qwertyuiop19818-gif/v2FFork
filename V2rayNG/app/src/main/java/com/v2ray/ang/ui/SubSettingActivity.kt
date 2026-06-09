@@ -109,12 +109,17 @@ class SubSettingActivity : BaseActivity() {
     }
 
     private inner class ActivityAdapterListener : BaseAdapterListener {
-        override fun onEdit(guid: String, position: Int) {
-            startActivity(
-                Intent(ownerActivity, SubEditActivity::class.java)
-                    .putExtra("subId", guid)
-            )
-        }
+override fun onEdit(guid: String, position: Int) {
+    val subscription = viewModel.getAll().find { it.guid == guid }
+    if (subscription?.subscription?.isPermanent == true) {
+        toast("No.")
+        return
+    }
+    startActivity(
+        Intent(ownerActivity, SubEditActivity::class.java)
+            .putExtra("subId", guid)
+    )
+}
 
         override fun onRemove(guid: String, position: Int) {
             if (MmkvManager.decodeSettingsBool(AppConfig.PREF_CONFIRM_REMOVE)) {
