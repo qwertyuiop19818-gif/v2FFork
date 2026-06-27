@@ -60,14 +60,32 @@ class MainRecyclerAdapter(
             holder.itemMainBinding.tvStatistics.text = getAddress(profile)
             holder.itemMainBinding.tvType.text = profile.configType.name
 
-            //TestResult
-            val aff = MmkvManager.decodeServerAffiliationInfo(guid)
-            holder.itemMainBinding.tvTestResult.text = aff?.getTestDelayString().orEmpty()
-            if ((aff?.testDelayMillis ?: 0L) < 0L) {
-                holder.itemMainBinding.tvTestResult.setTextColor(ContextCompat.getColor(context, R.color.colorPingRed))
-            } else {
-                holder.itemMainBinding.tvTestResult.setTextColor(ContextCompat.getColor(context, R.color.colorPing))
-            }
+//TestResult с переходом от зелёного к красному
+val aff = MmkvManager.decodeServerAffiliationInfo(guid)
+holder.itemMainBinding.tvTestResult.text = aff?.getTestDelayString().orEmpty()
+
+val delay = aff?.testDelayMillis ?: 0L
+
+val color = when {
+    delay < 0L -> {
+        ContextCompat.getColor(context, R.color.colorPingRed)
+    }
+    else -> {
+        // Пинг 0ms = зелёный (120°), 1000ms = красный (0°)
+        val maxDelay = 1000f
+        val normalized = (delay / maxDelay).coerceIn(0f, 1f)
+        
+        // Hue: от 120° (зелёный) до 0° (красный) через жёлтый (60°)
+        val hue = 120f * (1f - normalized) // 120° -> 0°
+        val saturation = 1f
+        val value = 1f
+        
+        val color = android.graphics.Color.HSVToColor(floatArrayOf(hue, saturation, value))
+        color
+    }
+}
+
+holder.itemMainBinding.tvTestResult.setTextColor(color)
 
             //layoutIndicator
             if (guid == MmkvManager.getSelectServer()) {

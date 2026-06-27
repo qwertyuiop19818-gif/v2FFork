@@ -106,6 +106,13 @@
         android:id="@+id/sort_by_test_results"
         android:title="@string/title_sort_by_test_results"
         app:showAsAction="never" />
+<!-- 
+    <item
+        android:id="@+id/format_with_emoji"
+        android:title="Format with Country Emoji"
+        android:icon="@android:drawable/ic_menu_edit"
+        app:showAsAction="ifRoom" />
+-->
     <item
         android:id="@+id/locate_selected_config"
         android:title="@string/title_locate_selected_config"

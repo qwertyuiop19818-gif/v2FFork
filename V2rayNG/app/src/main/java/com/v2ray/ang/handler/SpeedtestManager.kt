@@ -40,6 +40,25 @@ object SpeedtestManager {
         return time
     }
 
+suspend fun getServerCountryInfo(serverAddress: String): String? {
+    return try {
+        val url = "http://ip-api.com/json/${serverAddress}?fields=countryCode"
+        val httpPort = try {
+            SettingsManager.getHttpPort()?.toInt() ?: 0
+        } catch (e: Exception) {
+            0
+        }
+        val content = HttpUtil.getUrlContent(url, 5000, httpPort)
+        if (content.isNullOrBlank()) return null
+        val json = JsonUtil.fromJson(content, Map::class.java)
+        json?.get("countryCode") as? String
+    } catch (e: Exception) {
+        LogUtil.e(AppConfig.TAG, "Failed to get country for $serverAddress", e)
+        null
+    }
+}
+
+
     /**
      * Measures the time taken to establish a TCP connection to a given URL and port.
      *

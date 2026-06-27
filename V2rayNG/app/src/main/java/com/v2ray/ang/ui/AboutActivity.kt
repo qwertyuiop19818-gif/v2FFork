@@ -42,7 +42,7 @@ class AboutActivity : BaseActivity() {
             Utils.openUri(this, AppConfig.APP_PRIVACY_POLICY)
         }
 
-        "v${BuildConfig.VERSION_NAME} (${V2RayNativeManager.getLibVersion()})".also {
+        "v2crackNG ${BuildConfig.VERSION_NAME} (beta) (${V2RayNativeManager.getLibVersion()})".also {
             binding.tvVersion.text = it
         }
         BuildConfig.APPLICATION_ID.also {

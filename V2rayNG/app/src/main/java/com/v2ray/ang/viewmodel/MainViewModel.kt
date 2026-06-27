@@ -412,6 +412,54 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         keywordFilter = keyword
         reloadServerList()
     }
+/**
+ * Formats all server profiles by adding country emoji based on IP address
+ * @return Number of formatted profiles
+ */
+suspend fun formatAllProfilesWithEmoji(): Int {
+    return withContext(Dispatchers.IO) {
+        var count = 0
+        val serversToUpdate = serversCache.toList()
+        
+        for (serverCache in serversToUpdate) {
+            val profile = serverCache.profile
+            val oldRemark = profile.remarks
+            
+            // Skip if already has flag emoji at start
+            if (oldRemark.matches(Regex("^[\\uD83C][\\uDDE6-\\uDDFF][\\uD83C][\\uDDE6-\\uDDFF].*"))) {
+                continue
+            }
+            
+            // Get server address directly from ProfileItem
+            val serverAddress = profile.server
+            
+            if (serverAddress.isNullOrBlank()) {
+                continue
+            }
+            
+            // Get country code from API
+            val countryCode = try {
+                SpeedtestManager.getServerCountryInfo(serverAddress)
+            } catch (e: Exception) {
+                LogUtil.e(AppConfig.TAG, "Failed to get country for $serverAddress", e)
+                null
+            }
+            
+            // Only add emoji if we got a country code
+            if (!countryCode.isNullOrBlank()) {
+                val emoji = Utils.countryCodeToEmoji(countryCode)
+                val newRemark = "$emoji $oldRemark"
+                if (newRemark != oldRemark) {
+                    profile.remarks = newRemark
+                    MmkvManager.encodeServerConfig(serverCache.guid, profile)
+                    count++
+                }
+            }
+        }
+        
+        count
+    }
+}
 
     fun findSubscriptionIdBySelect(): String? {
         // Get the selected server GUID

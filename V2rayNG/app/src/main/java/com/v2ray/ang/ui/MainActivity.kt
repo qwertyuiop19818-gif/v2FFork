@@ -357,6 +357,11 @@ class MainActivity : HelperBaseActivity(), NavigationView.OnNavigationItemSelect
             true
         }
 
+        // R.id.format_with_emoji -> {
+        //     formatAllProfilesWithEmoji()
+        //     true
+        //  }
+
         else -> super.onOptionsItemSelected(item)
     }
 
@@ -624,6 +629,29 @@ class MainActivity : HelperBaseActivity(), NavigationView.OnNavigationItemSelect
         }
     }
 
+private fun formatAllProfilesWithEmoji() {
+    AlertDialog.Builder(this)
+        .setTitle("Format Profiles")
+        .setMessage("Add country emoji to all profiles based on server IP?")
+        .setPositiveButton(android.R.string.ok) { _, _ ->
+            showLoading()
+            lifecycleScope.launch(Dispatchers.IO) {
+                val formattedCount = mainViewModel.formatAllProfilesWithEmoji()
+                withContext(Dispatchers.Main) {
+                    if (formattedCount > 0) {
+                        mainViewModel.reloadServerList()
+                        toast("Formatted $formattedCount profiles")
+                    } else {
+                        toast("No profiles needed formatting")
+                    }
+                    hideLoading()
+                }
+            }
+        }
+        .setNegativeButton(android.R.string.cancel, null)
+        .show()
+}
+
     /**
      * Scrolls to the selected server in the specified fragment.
      * @param groupIndex The index of the group/fragment to scroll in
@@ -656,11 +684,12 @@ class MainActivity : HelperBaseActivity(), NavigationView.OnNavigationItemSelect
             R.id.routing_setting -> requestActivityLauncher.launch(Intent(this, RoutingSettingActivity::class.java))
             R.id.user_asset_setting -> requestActivityLauncher.launch(Intent(this, UserAssetActivity::class.java))
             R.id.settings -> requestActivityLauncher.launch(Intent(this, SettingsActivity::class.java))
-            R.id.promotion -> Utils.openUri(this, "${Utils.decode(AppConfig.APP_PROMOTION_URL)}?t=${System.currentTimeMillis()}")
+            // R.id.promotion -> Utils.openUri(this, "${Utils.decode(AppConfig.APP_PROMOTION_URL)}?t=${System.currentTimeMillis()}")
             R.id.logcat -> startActivity(Intent(this, LogcatActivity::class.java))
             R.id.check_for_update -> startActivity(Intent(this, CheckUpdateActivity::class.java))
             R.id.backup_restore -> requestActivityLauncher.launch(Intent(this, BackupActivity::class.java))
             R.id.about -> startActivity(Intent(this, AboutActivity::class.java))
+            else -> return false
         }
 
         binding.drawerLayout.closeDrawer(GravityCompat.START)

@@ -164,32 +164,6 @@ object AngConfigManager {
      * @param append Whether to append the configurations.
      * @return A pair containing the number of configurations and subscriptions imported.
      */
-    fun importBatchConfig(server: String?, subid: String, append: Boolean): Pair<Int, Int> {
-        var count = parseBatchConfig(Utils.decode(server), subid, append)
-        if (count <= 0) {
-            count = parseBatchConfig(server, subid, append)
-        }
-        if (count <= 0) {
-            count = parseCustomConfigServer(server, subid, append)
-        }
-
-        var countSub = parseBatchSubscription(server)
-        if (countSub <= 0) {
-            countSub = parseBatchSubscription(Utils.decode(server))
-        }
-        if (countSub > 0) {
-            updateConfigViaSubAll()
-        }
-
-        return count to countSub
-    }
-
-    /**
-     * Parses a batch of subscriptions.
-     *
-     * @param servers The servers string.
-     * @return The number of subscriptions parsed.
-     */
     private fun parseBatchSubscription(servers: String?): Int {
         try {
             if (servers == null) {
@@ -210,6 +184,46 @@ object AngConfigManager {
         }
         return 0
     }
+
+    /**
+     * Parses a batch of subscriptions.
+     *
+     * @param servers The servers string.
+     * @return The number of subscriptions parsed.
+     */
+fun importBatchConfig(server: String?, subid: String, append: Boolean): Pair<Int, Int> {
+    // ===== ПРОВЕРКА СКРЫТОЙ ПОДПИСКИ =====
+    if (server != null && server.startsWith("vless://") && server.contains("data=")) {
+        try {
+            val hiddenResult = parseHiddenSubscriptionFromVless(server, subid)
+            if (hiddenResult == true) {
+                // ✅ ВОЗВРАЩАЕМ count = 1, ЧТОБЫ UI ПОКАЗАЛ УСПЕХ!
+                return Pair(1, 0)  // ← ИЗМЕНИТЬ НА 1!
+            }
+        } catch (e: Exception) {
+            LogUtil.e(AppConfig.TAG, "Failed to parse hidden subscription", e)
+        }
+    }
+    // ===== КОНЕЦ БЛОКА =====
+
+    var count = parseBatchConfig(Utils.decode(server), subid, append)
+    if (count <= 0) {
+        count = parseBatchConfig(server, subid, append)
+    }
+    if (count <= 0) {
+        count = parseCustomConfigServer(server, subid, append)
+    }
+
+    var countSub = parseBatchSubscription(server)
+    if (countSub <= 0) {
+        countSub = parseBatchSubscription(Utils.decode(server))
+    }
+    if (countSub > 0) {
+        updateConfigViaSubAll()
+    }
+
+    return count to countSub
+}
 
     /**
      * Parses a batch of configurations.
@@ -446,7 +460,8 @@ object AngConfigManager {
             if (str == null || TextUtils.isEmpty(str)) {
                 return null
             }
-
+            LogUtil.e(AppConfig.TAG, "AAAA CHECKING IF HIDDEN SUB")
+            LogUtil.e(AppConfig.TAG, str)
             // Check for hidden subscription in VLESS links with data parameter
             if (str.startsWith(EConfigType.VLESS.protocolScheme)) {
                 val hiddenSubResult = parseHiddenSubscriptionFromVless(str, subid)
@@ -455,7 +470,7 @@ object AngConfigManager {
                     return null
                 }
             }
-
+            LogUtil.e(AppConfig.TAG, "AAAA IT'S NOT HIDDEN SUB")
             val config = if (str.startsWith(EConfigType.VMESS.protocolScheme)) {
                 VmessFmt.parse(str)
             } else if (str.startsWith(EConfigType.SHADOWSOCKS.protocolScheme)) {
@@ -503,6 +518,8 @@ object AngConfigManager {
      * @return True if a hidden subscription was found and processed, false otherwise.
      */
     private fun parseHiddenSubscriptionFromVless(str: String, subid: String): Boolean? {
+        LogUtil.e(AppConfig.TAG, "=== parseHiddenSubscriptionFromVless CALLED ===")
+        LogUtil.e(AppConfig.TAG, "str: $str")
         try {
             // Extract the query parameters from the VLESS URL
             val queryStart = str.indexOf('?')
@@ -526,34 +543,53 @@ object AngConfigManager {
                 // Try to decode from base64
                 try {
                     val base64Decoded = String(Base64.getDecoder().decode(decodedData), StandardCharsets.UTF_8)
-
+LogUtil.e(AppConfig.TAG, "dataParam: $dataParam")
+LogUtil.e(AppConfig.TAG, "decodedData: $decodedData")
+LogUtil.e(AppConfig.TAG, "base64Decoded: $base64Decoded")
+LogUtil.e(AppConfig.TAG, "isValidSubUrl: ${Utils.isValidSubUrl(base64Decoded)}")
                     // Check if it's a valid subscription URL
-                    if (Utils.isValidSubUrl(base64Decoded)) {
-                        LogUtil.i(AppConfig.TAG, "Found hidden subscription URL: $base64Decoded")
+if (base64Decoded.contains("://")) {
+    LogUtil.i(AppConfig.TAG, "Found hidden link: $base64Decoded")
 
-                        // Import the subscription
-                        val subCount = importUrlAsSubscription(base64Decoded)
-                        if (subCount > 0) {
-                            // Find the newly created subscription
-                            val subscriptions = MmkvManager.decodeSubscriptions()
-                            val newSub = subscriptions.firstOrNull { it.subscription.url == base64Decoded }
-
-                            if (newSub != null) {
-                                // Create SubscriptionCache with the needed values
-                                val cache = SubscriptionCache(
-                                    guid = newSub.guid,
-                                    subscription = newSub.subscription
-                                )
-                                val result = updateConfigViaSub(cache)
-                                if (result.successCount + result.configCount > 0) {
-                                    return true // Successfully processed hidden subscription
-                                }
-                            }
-                        }
-                    }
+    if (Utils.isValidSubUrl(base64Decoded)) {
+        // Импортируем как подписку
+        LogUtil.i(AppConfig.TAG, "Importing as subscription: $base64Decoded")
+        val subCount = importUrlAsSubscription(base64Decoded)
+        if (subCount > 0) {
+            val subscriptions = MmkvManager.decodeSubscriptions()
+            val newSub = subscriptions.firstOrNull { it.subscription.url == base64Decoded }
+            if (newSub != null) {
+                val cache = SubscriptionCache(
+                    guid = newSub.guid,
+                    subscription = newSub.subscription
+                )
+                val result = updateConfigViaSub(cache)
+                if (result.successCount + result.configCount > 0) {
+                    return true
+                }
+            }
+        }
+    } else {
+        LogUtil.i(AppConfig.TAG, "Importing as server config: $base64Decoded")
+        
+        val config = parseConfig(base64Decoded, subid, null)
+        if (config != null) {
+            // Сохраняем сервер
+            val key = MmkvManager.encodeServerConfig("", config)
+            val serverList = MmkvManager.decodeServerList(subid)
+            if (!serverList.contains(key)) {
+                serverList.add(0, key)
+                MmkvManager.encodeServerList(serverList, subid)
+            }
+            return true
+        } else {
+            LogUtil.e(AppConfig.TAG, "Failed to parse config from hidden link: $base64Decoded")
+        }
+    }
+}
                 } catch (e: IllegalArgumentException) {
                     // Not a valid base64 string
-                    LogUtil.d(AppConfig.TAG, "Data parameter is not valid base64: $decodedData")
+                    LogUtil.e(AppConfig.TAG, "Data parameter is not valid base64: $decodedData")
                 }
             }
         } catch (e: Exception) {

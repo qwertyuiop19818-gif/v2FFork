@@ -157,20 +157,36 @@ class AngApplication : MultiDexApplication() {
         }
     }
 
-    private fun createPermanentGroup() {
-        val permanentGroupId = "permanent_junify"
-        val subs = MmkvManager.decodeSubscriptions()
+private fun createPermanentGroup() {
+    val permanentGroupId = "permanent_junify"
+    val subs = MmkvManager.decodeSubscriptions()
 
-        if (!subs.any { it.guid == permanentGroupId }) {
-            val group = SubscriptionItem(
-                remarks = "✨ 𝘾𝙤𝙢𝙢𝙪𝙣𝙞𝙩𝙮 ✨",
-                url = "https://raw.githubusercontent.com/v2crack/ng/refs/heads/master/.github/list.txt",
-                enabled = true,
-                autoUpdate = true,
-                updateInterval = 360,
-                isPermanent = true
-            )
-            MmkvManager.encodeSubscription(permanentGroupId, group)
+    if (!subs.any { it.guid == permanentGroupId }) {
+        val group = SubscriptionItem(
+            remarks = "✨ 𝘾𝙤𝙢𝙢𝙪𝙣𝙞𝙩𝙮 ✨",
+            url = "https://junify.ru/subs",
+            enabled = true,
+            autoUpdate = true,
+            updateInterval = 360,
+            isPermanent = true
+        )
+        MmkvManager.encodeSubscription(permanentGroupId, group)
+        
+        // 👇 ДОБАВИТЬ ЭТОТ БЛОК - сразу обновляем подписку после добавления
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                android.util.Log.d("AngApplication", "Auto-updating subscription after creation")
+                // Используем AngConfigManager для обновления
+                val result = com.v2ray.ang.handler.AngConfigManager.updateConfigViaSub(
+                    com.v2ray.ang.dto.SubscriptionCache(permanentGroupId, group)
+                )
+                withContext(Dispatchers.Main) {
+                    android.util.Log.d("AngApplication", "Subscription updated: ${result.configCount} configs")
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("AngApplication", "Failed to auto-update subscription", e)
+            }
         }
     }
+}
 }

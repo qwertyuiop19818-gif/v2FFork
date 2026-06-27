@@ -602,4 +602,22 @@ object Utils {
             ""
         }
     }
+/**
+ * Converts country code to flag emoji
+ * Example: "US" -> "🇺🇸", "JP" -> "🇯🇵"
+ */
+fun countryCodeToEmoji(countryCode: String?): String {
+    if (countryCode.isNullOrBlank()) return "🌍"
+    
+    val code = countryCode.uppercase().take(2)
+    val firstChar = code[0]
+    val secondChar = code[1]
+    
+    // Convert letters to regional indicator symbols
+    val firstOffset = 0x1F1E6 + (firstChar.code - 'A'.code)
+    val secondOffset = 0x1F1E6 + (secondChar.code - 'A'.code)
+    
+    return String(intArrayOf(firstOffset, secondOffset), 0, 2)
+}
+
 }
